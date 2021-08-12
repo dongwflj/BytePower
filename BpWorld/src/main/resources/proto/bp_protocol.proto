@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.bytepower.common.grpc";
+option java_outer_classname = "BpProtocol";
+
+service BpProxy {
+  // A simple RPC.
+  rpc unifyCmd(Message) returns (Message) {}
+
+  // A Bidirectional streaming RPC.
+  rpc bidirectionCmd(stream Message) returns (stream Message) {}
+}
+
+message Message {
+  int32  code = 1;
+  string name = 2;
+  string from = 3;
+  string to = 4;
+  int32  seq = 5;
+  string id = 6;
+  string sid = 7;
+  string body = 50;
+}
