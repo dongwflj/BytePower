@@ -2,6 +2,10 @@ package com.bytepower.bpworld.proxy;
 
 import com.bytepower.common.grpc.BpProxyGrpc;
 import com.bytepower.common.grpc.Message;
+import com.bytepower.common.grpc.BpServerGrpc;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -16,6 +20,7 @@ public class BpProxyServer {
 	private final int port;
 	private final Server server;
 
+
 	public BpProxyServer(int port) throws IOException {
 		this.port = port;
 		this.server = ServerBuilder.forPort(port).addService(new BpProxyService()).build();
@@ -24,7 +29,7 @@ public class BpProxyServer {
 	// 启动服务
 	public void start() throws IOException {
 		server.start();
-		logger.info("Server started, listening on " + port);
+		logger.info("BpProxyServer started, listening on " + port);
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
@@ -63,16 +68,26 @@ public class BpProxyServer {
 	 *
 	 */
 	private static class BpProxyService extends BpProxyGrpc.BpProxyImplBase {
+		private final ManagedChannel channel;
+		private final BpServerGrpc.BpServerBlockingStub blockingStub;
+
 		public BpProxyService() {
+			// Client role
+			String coreServerAddr = "127.0.0.1";
+			int coreServerPort = 10090;
+			ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(coreServerAddr, 10090).usePlaintext(true);
+			channel = channelBuilder.build();
+			// 创建一个阻塞客户端，支持简单一元服务和流输出调用服务
+			blockingStub = BpServerGrpc.newBlockingStub(channel);
 		}
 
 		@Override
 		public void unifyCmd(Message message, StreamObserver<Message> responseObserver) {
-			logger.info(">>> unifyCmd() request:{}", message);
-			Message resp = Message.newBuilder().setName("fromBpProxy").setCode(200).build();
+			logger.info(">>> unifyCmd() BpProxy recv cmd:{}", message);
+			Message resp = blockingStub.unifyServerCmd(message);
 			responseObserver.onNext(resp);
 			responseObserver.onCompleted();
-			logger.info("<<< unifyCmd() response");
+			logger.info("<<< unifyCmd() BpProxy send response:{}", resp);
 		}
 
 		/**

@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Scanner;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class BpWorldClient {
@@ -38,8 +37,8 @@ public class BpWorldClient {
     /**
      * 一元服务调用
      */
-    public void connect(String from) {
-        logger.info(">>> connect: from={}", from);
+    public void sendCmd(String from) {
+        logger.info(">>> sendCmd: from={}", from);
         Message req = Message.newBuilder().setName("CONNECT").setFrom(from).build();
         Message resp;
         try {
@@ -48,7 +47,7 @@ public class BpWorldClient {
             logger.info("RPC failed: {}", e.getStatus());
             return;
         }
-        logger.info("<<< simpleRpc end called {}", resp);
+        logger.info("<<< sendCmd recv response:{}", resp);
     }
 
     /**
@@ -61,12 +60,12 @@ public class BpWorldClient {
         StreamObserver<Message> requestObserver = asyncStub.bidirectionCmd(new StreamObserver<Message>() {
             @Override
             public void onNext(Message value) {
-                logger.info("connect2Server receive message : {}", value);
+                logger.info("Stream receive message : {}", value);
             }
 
             @Override
             public void onError(Throwable t) {
-                logger.error("onError: connect2Server Failed: {}", Status.fromThrowable(t));
+                logger.error("onError: stream Failed: {}", Status.fromThrowable(t));
             }
 
             @Override
@@ -78,7 +77,8 @@ public class BpWorldClient {
         logger.info("<<< connect2Server");
     }
 
-    public void sendMsg2Server() {
+    public void sendStreamCmd() {
+        logger.info(">>> sendStreamCmd");
         Scanner sc = new Scanner(System.in);
         String input;
         do {
@@ -96,6 +96,7 @@ public class BpWorldClient {
                 throw e;
             }
         } while (input != "x");
+        logger.info("<<< sendStreamCmd");
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -105,9 +106,9 @@ public class BpWorldClient {
         try {
             // simple2 rpc
             String from = "r1@bp.com";
-			client.connect(from);
+			client.sendCmd(from);
             client.connect2Server();
-            client.sendMsg2Server();
+            client.sendStreamCmd();
         }
         finally {
             client.shutdown();
