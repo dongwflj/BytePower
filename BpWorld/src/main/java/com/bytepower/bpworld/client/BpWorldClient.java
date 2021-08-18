@@ -81,10 +81,10 @@ public class BpWorldClient {
     public void sendMsg2Server() {
         Scanner sc = new Scanner(System.in);
         String input;
-        while (true) {
+        do {
             logger.info("Please input a char to send bistream");
             input = sc.nextLine();
-            logger.info("Your input:" + input);
+            logger.info("Your input: {}", input);
             try {
                 Message req = Message.newBuilder().setCode(1).setName("CONNECT").setFrom("TestClient")
                         .setId("1234343434").build();
@@ -95,12 +95,13 @@ public class BpWorldClient {
                 requestSender.onError(e);
                 throw e;
             }
-        }
+        } while (input != "x");
     }
 
     public static void main(String[] args) throws InterruptedException {
         logger.info("Start BpWorldClient...");
-        BpWorldClient client = new BpWorldClient("10.11.97.13", 8980);
+        ///BpWorldClient client = new BpWorldClient("10.11.97.13", 8980);
+        BpWorldClient client = new BpWorldClient("127.0.0.1", 10080);
         try {
             // simple2 rpc
             String from = "r1@bp.com";

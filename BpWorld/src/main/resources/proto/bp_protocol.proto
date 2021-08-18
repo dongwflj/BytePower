@@ -12,6 +12,11 @@ service BpProxy {
   rpc bidirectionCmd(stream Message) returns (stream Message) {}
 }
 
+service BpServer {
+  // A simple RPC.
+  rpc unifyServerCmd(Message) returns (Message) {}
+}
+
 message Message {
   int32  code = 1;
   string name = 2;
