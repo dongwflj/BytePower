@@ -13,17 +13,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 public class BpProxyServer {
 	private static final Logger logger = LoggerFactory.getLogger(BpProxyServer.class);
-
 	private final int port;
 	private final Server server;
 
-
 	public BpProxyServer(int port) throws IOException {
 		this.port = port;
-		this.server = ServerBuilder.forPort(port).addService(new BpProxyService()).build();
+		this.server = ServerBuilder.forPort(port).addService(new BpProxyService())
+									.addService(new BpServerService()).build();
 	}
 
 	// 启动服务
@@ -67,6 +67,19 @@ public class BpProxyServer {
 	 * 服务端类的实现
 	 *
 	 */
+	private static class BpServerService extends BpServerGrpc.BpServerImplBase {
+		public BpServerService() {
+		}
+		@Override
+		public void unifyServerCmd(Message message, StreamObserver<Message> responseObserver) {
+			logger.info(">>> unifyServerCmd() proxyServer recv server request:{}", message);
+			Message resp = Message.newBuilder().setName("NOTIFYRESP").setCode(200).build();
+			responseObserver.onNext(resp);
+			responseObserver.onCompleted();
+			logger.info("<<< unifyServerCmd() proxyServer send response:{}", resp);
+		}
+	}
+
 	private static class BpProxyService extends BpProxyGrpc.BpProxyImplBase {
 		private final ManagedChannel channel;
 		private final BpServerGrpc.BpServerBlockingStub blockingStub;
@@ -84,7 +97,9 @@ public class BpProxyServer {
 		@Override
 		public void unifyCmd(Message message, StreamObserver<Message> responseObserver) {
 			logger.info(">>> unifyCmd() BpProxy recv cmd:{}", message);
-			Message resp = blockingStub.unifyServerCmd(message);
+			Message proxyReq = Message.newBuilder(message).setContact("127.0.0.1:10080").build();
+			logger.info("Proxy add contact for message:{}", proxyReq);
+			Message resp = blockingStub.unifyServerCmd(proxyReq);
 			responseObserver.onNext(resp);
 			responseObserver.onCompleted();
 			logger.info("<<< unifyCmd() BpProxy send response:{}", resp);

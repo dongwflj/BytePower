@@ -25,5 +25,6 @@ message Message {
   int32  seq = 5;
   string id = 6;
   string sid = 7;
+  string contact = 8;
   string body = 50;
 }

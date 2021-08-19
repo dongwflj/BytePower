@@ -1,7 +1,10 @@
 package com.bytepower.bpworld.core;
 
 import com.bytepower.common.grpc.BpServerGrpc;
+import com.bytepower.common.grpc.BpProxyGrpc;
 import com.bytepower.common.grpc.Message;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -9,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 public class BpCoreServer {
 	private static final Logger logger = LoggerFactory.getLogger(BpCoreServer.class);
@@ -63,7 +67,12 @@ public class BpCoreServer {
 	 *
 	 */
 	private static class BpServerService extends BpServerGrpc.BpServerImplBase {
+		private HashMap<String, BpServerGrpc.BpServerBlockingStub> proxyContactMap;
+		private HashMap<String, BpServerGrpc.BpServerBlockingStub> proxyFromMap;
+
 		public BpServerService() {
+			proxyContactMap = new HashMap<>();
+			proxyFromMap = new HashMap<>();
 		}
 
 		@Override
@@ -72,6 +81,24 @@ public class BpCoreServer {
 			Message resp = Message.newBuilder().setName("fromBpCoreServer").setCode(200).build();
 			responseObserver.onNext(resp);
 			responseObserver.onCompleted();
+			String cmdName = message.getName();
+			if (cmdName.equals("CONNECT")) {
+				String[] address = message.getContact().split(":");
+				if (address.length == 2) {
+					ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(address[0],
+							Integer.parseInt(address[1])).usePlaintext(true);
+					ManagedChannel channel = channelBuilder.build();
+					BpServerGrpc.BpServerBlockingStub blockingStub = BpServerGrpc.newBlockingStub(channel);
+					proxyContactMap.put(message.getContact(), blockingStub);
+					proxyFromMap.put(message.getFrom(), blockingStub);
+
+					Message notify = Message.newBuilder().setName("NOTIFY").setBody("From core server").build();
+					Message notifyResp = blockingStub.unifyServerCmd(notify);
+					logger.info("Core server recv notify resp:{}", notifyResp);
+				} else {
+					logger.error("Proxy address is not valid:{}", address);
+				}
+			}
 			logger.info("<<< unifyServerCmd() coreServer send response:{}", resp);
 		}
 	}
